@@ -1,0 +1,105 @@
+# Name of the workflow
+name: Continuous Deployment
+
+# This workflow triggers on different events: 
+# 1. push event to the main and uat branches
+# 2. pull request events, specifically for when pull requests are opened, closed, or reopened
+# 3. manual dispatch through GitHub's UI (workflow_dispatch)
+on: 
+    push:
+        branches: [main, uat]  # Workflow triggers on pushes to the 'main' and 'uat' branches
+    pull_request:
+        types: [closed, opened, reopened]  # Triggers on pull request actions: opened, closed, or reopened
+    workflow_dispatch:  # Allows manually triggering this workflow from the GitHub interface
+
+# Define the jobs within this workflow
+jobs:
+    # Job for deploying to S3
+    deploy-to-s3:
+      # Specifies the latest available Ubuntu runner to execute the job
+      runs-on: ubuntu-latest
+
+      # Specify the environment settings for deployment
+      environment: 
+        name: uat  # Environment is set to 'uat' for this job
+        url: http://auroraverusschool.org.s3-website-us-east-1.amazonaws.com  # Public URL for the deployed S3 website
+      
+      # Conditional check to ensure deployment only happens on specific events:
+      # 1. Event is a pull request
+      # 2. The pull request is merged
+      # 3. The base branch of the merged pull request is 'uat'
+      if: github.event_name == 'pull_request' && github.event.pull_request.merged && github.event.pull_request.base.ref == 'uat'
+
+      # List of steps to execute for this job
+      steps:
+        # Step 1: Checkout the latest code from the repository
+        - name: Checkout
+          uses: actions/checkout@v4  # Using the official checkout action to pull repository files
+
+        # Step 2: Configure AWS credentials for deploying to the S3 bucket
+        - name: Configure AWS credentials
+          uses: aws-actions/configure-aws-credentials@v4  # Using AWS credentials action for authentication
+          with:
+            aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}  # AWS Access Key ID from GitHub Secrets
+            aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}  # AWS Secret Access Key from GitHub Secrets
+            aws-region: us-east-1  # AWS region where the S3 bucket and CloudFront are hosted
+
+        # Step 3: Deploy to the S3 bucket
+        - name: Deploy to UAT S3
+          run: |
+            # Synchronize the local files with the specified S3 bucket
+            aws s3 sync . s3://auroraverusschool.org --delete --exclude ".git*"
+            
+            # Invalidate all files on CloudFront to ensure that new changes are picked up
+            echo "Invalidating all files to pick new changes from CloudFront"
+            aws cloudfront create-invalidation --distribution-id EBSQ36IKJC41X --paths "/*" #change the distribution ID to your CloudFront distribution ID
+
+
+
+    # deploy-to-devops:
+    #   runs-on: ubuntu-latest
+    #   environment: 
+    #     name: devops
+    #     url: http://devops.auroraverusschool.org.s3-website-us-east-1.amazonaws.com
+    #   if: github.event_name == 'pull_request' && github.event.pull_request.merged && github.event.pull_request.base.ref == 'devops'
+    #   steps:
+    #     - name: Checkout
+    #       uses: actions/checkout@v4
+
+    #     - name: Configure AWS credentials
+    #       uses: aws-actions/configure-aws-credentials@v4
+    #       with:
+    #         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+    #         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+    #         aws-region: us-east-1
+  
+    #     - name: Deploy to devops S3
+    #       run: |
+    #         aws s3 sync . s3://devops.auroraverusschool.org  --delete --exclude ".git*"
+    #         echo "Invalidating all files to pick new changes from cloudfront"
+    #         aws cloudfront create-invalidation --distribution-id EBSQ36IKJC41X --paths "/*"
+
+
+    # deploy-to-dev:
+    #   runs-on: ubuntu-latest
+    #   environment: 
+    #     name: dev
+    #     url: http://devs.auroraverusschool.org.s3-website-us-east-1.amazonaws.com
+    #   if: github.event_name == 'pull_request' && github.event.pull_request.merged && github.event.pull_request.base.ref == 'dev'
+    #   steps:
+    #     - name: Checkout
+    #       uses: actions/checkout@v4
+
+    #     - name: Configure AWS credentials
+    #       uses: aws-actions/configure-aws-credentials@v4
+    #       with:
+    #         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+    #         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+    #         aws-region: us-east-1
+  
+    #     - name: Deploy to dev S3
+    #       run: |
+    #         aws s3 sync . s3://devs.auroraverusschool.org  --delete --exclude ".git*"
+    #         echo "Invalidating all files to pick new changes from cloudfront"
+    #         aws cloudfront create-invalidation --distribution-id E8TGO3W5DOBIK --paths "/*"        
+
