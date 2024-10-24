@@ -21,7 +21,7 @@ jobs:
 
       # Specify the environment settings for deployment
       environment: 
-        name: uat  # Environment is set to 'uat' for this job
+        name: uat  # Environment is set to 'uat' for this particular job
         url: http://auroraverusschool.org.s3-website-us-east-1.amazonaws.com  # Public URL for the deployed S3 website
       
       # Conditional check to ensure deployment only happens on specific events:
