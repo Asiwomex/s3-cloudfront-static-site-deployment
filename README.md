@@ -1,8 +1,10 @@
 # Continuous Deployment of Static Website to Amazon S3 and CloudFront
 
-### READ 1.README.md 
-
 This repository hosts the automation workflow for deploying a **static website** to **Amazon S3** and **Amazon CloudFront** using **GitHub Actions**. The workflow automates the deployment process to the **User Acceptance Testing (UAT)** environment whenever changes are made to the repository.
+
+### READ the following
+1. DOCUMENTATION-Hosting a static website using S3 and Cloudfront.pdf
+2. 1.README.md
 
 ## Overview
 
